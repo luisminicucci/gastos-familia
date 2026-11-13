@@ -4,7 +4,7 @@ import { entriesForMonth, money, monthLabel, monthShort, sum } from '../lib.js';
 import { Dot, MonthPicker, PageHead } from '../ui.jsx';
 
 export default function Summary() {
-  const { expenses, month, members, categories } = useStore();
+  const { expenses, month, members, categories, rubros, catById } = useStore();
   const [vista, setVista] = useState('cat');
 
   const meses = [5, 4, 3, 2, 1, 0].map((i) => {
@@ -16,7 +16,10 @@ export default function Summary() {
   const total = sum(entries);
   const prev = meses[4].total;
 
-  const grupos = vista === 'cat'
+  const rubroDe = (e) => catById[e.category_id]?.rubro_id || null;
+  const grupos = vista === 'rub'
+    ? [...rubros, { id: null, name: 'Sin rubro', color: '#8C9A95' }].map((r) => ({ id: r.id, name: r.name, color: r.color, v: sum(entries.filter((e) => rubroDe(e) === r.id)) }))
+    : vista === 'cat'
     ? [...categories, { id: null, name: 'Sin categoría', color: '#8C9A95' }].map((c) => ({ id: c.id, name: c.name, color: c.color, v: sum(entries.filter((e) => (e.category_id || null) === c.id)) }))
     : [...members, { id: null, display_name: 'Sin asignar', color: '#8C9A95' }].map((m) => ({ id: m.id, name: m.display_name, color: m.color, v: sum(entries.filter((e) => (e.paid_by || null) === m.id)) }));
   const filas = grupos.filter((g) => g.v > 0).sort((a, b) => b.v - a.v);
@@ -47,8 +50,9 @@ export default function Summary() {
         </section>
 
         <section className="card stack12">
-          <div className="segmented">
+          <div className="segmented" style={{ gridTemplateColumns: `repeat(${rubros.length > 0 ? 3 : 2}, 1fr)` }}>
             <button type="button" className={vista === 'cat' ? 'on' : ''} onClick={() => setVista('cat')}>Por categoría</button>
+            {rubros.length > 0 && <button type="button" className={vista === 'rub' ? 'on' : ''} onClick={() => setVista('rub')}>Por rubro</button>}
             <button type="button" className={vista === 'per' ? 'on' : ''} onClick={() => setVista('per')}>Por persona</button>
           </div>
           {filas.length === 0 && <p className="muted">Sin gastos en este mes.</p>}

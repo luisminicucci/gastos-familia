@@ -6,7 +6,8 @@ import { Dot, Icon, MonthPicker, PageHead } from '../ui.jsx';
 import { ExpenseRow } from '../rows.jsx';
 
 export default function Movements() {
-  const { expenses, month, members, activeCategories, catById, memberById } = useStore();
+  const { expenses, month, members, activeCategories, activeRubros, rubroById, catById, memberById } = useStore();
+  const [rubro, setRubro] = useState('');
   const nav = useNavigate();
   const [persona, setPersona] = useState('');
   const [categoria, setCategoria] = useState('');
@@ -16,12 +17,13 @@ export default function Movements() {
   const rows = all.filter((e) =>
     (!persona || e.paid_by === persona) &&
     (!categoria || e.category_id === categoria) &&
+    (!rubro || (rubro === 'none' ? !catById[e.category_id]?.rubro_id : catById[e.category_id]?.rubro_id === rubro)) &&
     (!q || (e.note || '').toLowerCase().includes(q.toLowerCase())));
 
   function exportar() {
     downloadCSV(`gastos-${monthLabel(month).replace(' ', '-').toLowerCase()}.csv`, [
-      ['Fecha', 'Detalle', 'Categoría', 'Quién pagó', 'Medio', 'Cuotas', 'Monto total', 'Cuenta este mes'],
-      ...rows.map((e) => [e.spent_on, e.note, catById[e.category_id]?.name || '', memberById[e.paid_by]?.display_name || '',
+      ['Fecha', 'Detalle', 'Rubro', 'Categoría', 'Quién pagó', 'Medio', 'Cuotas', 'Monto total', 'Cuenta este mes'],
+      ...rows.map((e) => [e.spent_on, e.note, rubroById[catById[e.category_id]?.rubro_id]?.name || '', catById[e.category_id]?.name || '', memberById[e.paid_by]?.display_name || '',
         e.method, e.installments, String(Number(e.amount)).replace('.', ','), String(Math.round(e.share * 100) / 100).replace('.', ',')])
     ]);
   }
@@ -39,10 +41,19 @@ export default function Movements() {
             {members.map((m) => <option key={m.id} value={m.id}>{m.display_name}</option>)}
           </select>
         </label>
+        {activeRubros.length > 0 && (
+          <label className="field compact"><span className="sr">Rubro</span>
+            <select value={rubro} onChange={(e) => { setRubro(e.target.value); setCategoria(''); }}>
+              <option value="">Todos los rubros</option>
+              {activeRubros.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+              <option value="none">Sin rubro</option>
+            </select>
+          </label>
+        )}
         <label className="field compact"><span className="sr">Categoría</span>
           <select value={categoria} onChange={(e) => setCategoria(e.target.value)}>
             <option value="">Todas las categorías</option>
-            {activeCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            {activeCategories.filter((c) => !rubro || (rubro === 'none' ? !c.rubro_id : c.rubro_id === rubro)).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </label>
         <label className="field compact grow"><span className="sr">Buscar</span>

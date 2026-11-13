@@ -5,7 +5,7 @@ import { entriesForMonth, money, sum } from '../lib.js';
 import { Bar, Dot, MonthPicker, PageHead } from '../ui.jsx';
 
 export default function Budgets() {
-  const { expenses, month, activeCategories, loadAll } = useStore();
+  const { expenses, month, activeCategories, activeRubros, loadAll } = useStore();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState({});
   const [busy, setBusy] = useState(false);
@@ -13,6 +13,18 @@ export default function Budgets() {
   const entries = entriesForMonth(expenses, month);
   const total = sum(entries);
   const budget = activeCategories.reduce((t, c) => t + Number(c.budget), 0);
+
+  const conRubro = activeRubros.length > 0;
+  const grupos = conRubro
+    ? [...activeRubros, { id: null, name: 'Sin rubro', color: '#8C9A95' }].map((r) => ({
+        ...r, header: true,
+        cats: activeCategories.filter((c) => (activeRubros.some((x) => x.id === c.rubro_id) ? c.rubro_id : null) === r.id)
+      })).filter((g) => g.cats.length)
+    : [{ id: null, header: false, cats: activeCategories }];
+  for (const g of grupos) {
+    g.budget = g.cats.reduce((t, c) => t + Number(c.budget), 0);
+    g.gastado = sum(entries.filter((e) => g.cats.some((c) => c.id === e.category_id)));
+  }
 
   function empezar() {
     setDraft(Object.fromEntries(activeCategories.map((c) => [c.id, String(Number(c.budget) || '')])));
@@ -46,27 +58,37 @@ export default function Budgets() {
       </div>
       <section className="card stack4">
         <p className="muted small">El presupuesto es el mismo todos los meses. Las compras en cuotas cuentan solo la cuota de cada mes.</p>
-        {activeCategories.map((c) => {
-          const g = sum(entries.filter((e) => e.category_id === c.id));
-          const b = Number(c.budget);
-          const pct = b ? (g / b) * 100 : 0;
-          return (
-            <div key={c.id} className="budgetrow">
-              <div className="row gap8">
-                <Dot color={c.color} />
-                <span className="grow strong">{c.name}</span>
-                {editing ? (
-                  <label className="row gap6 small"><span className="muted">$</span>
-                    <input className="budget-input" inputMode="numeric" aria-label={'Presupuesto de ' + c.name}
-                      value={draft[c.id] ?? ''} onChange={(e) => setDraft({ ...draft, [c.id]: e.target.value })} placeholder="0" />
-                  </label>
-                ) : b > 0 ? <span className={'small strong ' + (pct >= 85 ? 'warn' : 'muted')}>{Math.round(pct)}%</span> : <span className="small muted">Sin límite</span>}
+        {grupos.map((g) => (
+          <div key={g.id || 'none'} className="stack4">
+            {g.header && (
+              <div className="rubrohead">
+                <Dot color={g.color} /><span className="grow rubroname">{g.name}</span>
+                <span className="nowrap">{money(g.gastado)}{g.budget > 0 && ` de ${money(g.budget)}`}</span>
               </div>
-              {!editing && b > 0 && <Bar pct={pct} warn={pct >= 85} />}
-              {!editing && <span className="muted small">{b > 0 ? `${money(g)} de ${money(b)} · ${g <= b ? 'quedan ' + money(b - g) : 'excedido ' + money(g - b)}` : `Gastado ${money(g)}`}</span>}
-            </div>
-          );
-        })}
+            )}
+          {g.cats.map((c) => {
+            const gas = sum(entries.filter((e) => e.category_id === c.id));
+            const b = Number(c.budget);
+            const pct = b ? (gas / b) * 100 : 0;
+            return (
+              <div key={c.id} className="budgetrow">
+                <div className="row gap8">
+                  <Dot color={c.color} />
+                  <span className="grow strong">{c.name}</span>
+                  {editing ? (
+                    <label className="row gap6 small"><span className="muted">$</span>
+                      <input className="budget-input" inputMode="numeric" aria-label={'Presupuesto de ' + c.name}
+                        value={draft[c.id] ?? ''} onChange={(e) => setDraft({ ...draft, [c.id]: e.target.value })} placeholder="0" />
+                    </label>
+                  ) : b > 0 ? <span className={'small strong ' + (pct >= 85 ? 'warn' : 'muted')}>{Math.round(pct)}%</span> : <span className="small muted">Sin límite</span>}
+                </div>
+                {!editing && b > 0 && <Bar pct={pct} warn={pct >= 85} />}
+                {!editing && <span className="muted small">{b > 0 ? `${money(gas)} de ${money(b)} · ${gas <= b ? 'quedan ' + money(b - gas) : 'excedido ' + money(gas - b)}` : `Gastado ${money(gas)}`}</span>}
+              </div>
+            );
+          })}
+          </div>
+        ))}
       </section>
     </div>
   );

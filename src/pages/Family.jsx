@@ -5,7 +5,8 @@ import { PALETA } from '../lib.js';
 import { Avatar, Dot, PageHead } from '../ui.jsx';
 
 export default function Family() {
-  const { me, family, members, categories, loadAll, session } = useStore();
+  const { me, family, members, categories, rubros, expenses, loadAll, session } = useStore();
+  const [nuevoRubro, setNuevoRubro] = useState('');
   const [nombre, setNombre] = useState(me.display_name);
   const [nuevaCat, setNuevaCat] = useState('');
   const [copiado, setCopiado] = useState(false);
@@ -21,6 +22,25 @@ export default function Family() {
     run(supabase.from('categories').insert({ family_id: me.family_id, name: nuevaCat.trim(), color: PALETA[categories.length % PALETA.length], sort: categories.length + 1 }));
     setNuevaCat('');
   };
+  const agregarRubro = (e) => {
+    e.preventDefault();
+    if (!nuevoRubro.trim()) return;
+    run(supabase.from('rubros').insert({ family_id: me.family_id, name: nuevoRubro.trim(), color: PALETA[(rubros.length + 3) % PALETA.length], sort: rubros.length + 1 }));
+    setNuevoRubro('');
+  };
+  const catUsada = (id) => expenses.some((e) => e.category_id === id);
+  const rubroUsado = (id) => categories.some((c) => c.rubro_id === id);
+  async function borrarCat(c) {
+    // Verifica en la base (incluye gastos más viejos que los que tiene cargados la app).
+    const { count, error } = await supabase.from('expenses').select('id', { count: 'exact', head: true }).eq('category_id', c.id);
+    if (error) return alert(error.message);
+    if (count > 0) return alert(`"${c.name}" tiene ${count} gasto(s) cargados. Podés ocultarla en lugar de borrarla.`);
+    if (confirm(`¿Borrar la categoría "${c.name}"?`)) run(supabase.from('categories').delete().eq('id', c.id));
+  }
+  function borrarRubro(r) {
+    if (rubroUsado(r.id)) return alert(`"${r.name}" tiene categorías asignadas. Sacáselas primero u ocultalo.`);
+    if (confirm(`¿Borrar el rubro "${r.name}"?`)) run(supabase.from('rubros').delete().eq('id', r.id));
+  }
   const copiar = async () => {
     try { await navigator.clipboard.writeText(family.invite_code); setCopiado(true); setTimeout(() => setCopiado(false), 2000); } catch { /* sin permiso */ }
   };
@@ -64,15 +84,43 @@ export default function Family() {
         </div>
         <div className="stack16">
           <section className="card stack8">
+            <h2 className="cardtitle">Rubros</h2>
+            <p className="muted small">Agrupan categorías para ver totales más generales (ej.: Hogar = Supermercado + Casa + Servicios). Un rubro sin categorías se puede borrar; si tiene, se puede ocultar.</p>
+            {rubros.length === 0 && <p className="muted small">Todavía no hay rubros.</p>}
+            {rubros.map((r) => (
+              <div key={r.id} className={'row gap10 catline' + (r.archived ? ' archived' : '')}>
+                <Dot color={r.color} />
+                <input className="inline-input grow" aria-label="Nombre del rubro" defaultValue={r.name}
+                  onBlur={(e) => e.target.value.trim() && e.target.value !== r.name && run(supabase.from('rubros').update({ name: e.target.value.trim() }).eq('id', r.id))} />
+                <span className="muted small nowrap">{categories.filter((c) => c.rubro_id === r.id && !c.archived).length} cat.</span>
+                {rubroUsado(r.id)
+                  ? <button type="button" className="btn small" onClick={() => run(supabase.from('rubros').update({ archived: !r.archived }).eq('id', r.id))}>{r.archived ? 'Reactivar' : 'Ocultar'}</button>
+                  : <button type="button" className="btn small danger" onClick={() => borrarRubro(r)}>Borrar</button>}
+              </div>
+            ))}
+            <form className="row gap8" onSubmit={agregarRubro}>
+              <input className="inline-input grow" placeholder="Nuevo rubro" value={nuevoRubro} onChange={(e) => setNuevoRubro(e.target.value)} aria-label="Nuevo rubro" />
+              <button className="btn small primary">Agregar</button>
+            </form>
+          </section>
+          <section className="card stack8">
             <h2 className="cardtitle">Categorías</h2>
+            <p className="muted small">Las que nunca se usaron se pueden borrar; las que tienen gastos se ocultan para no perder el historial.</p>
             {categories.map((c) => (
               <div key={c.id} className={'row gap10 catline' + (c.archived ? ' archived' : '')}>
                 <Dot color={c.color} />
                 <input className="inline-input grow" aria-label="Nombre de la categoría" defaultValue={c.name}
                   onBlur={(e) => e.target.value.trim() && e.target.value !== c.name && run(supabase.from('categories').update({ name: e.target.value.trim() }).eq('id', c.id))} />
-                <button type="button" className="btn small" onClick={() => run(supabase.from('categories').update({ archived: !c.archived }).eq('id', c.id))}>
-                  {c.archived ? 'Reactivar' : 'Ocultar'}
-                </button>
+                {rubros.length > 0 && (
+                  <select className="inline-select" aria-label={'Rubro de ' + c.name} value={c.rubro_id || ''}
+                    onChange={(e) => run(supabase.from('categories').update({ rubro_id: e.target.value || null }).eq('id', c.id))}>
+                    <option value="">Sin rubro</option>
+                    {rubros.filter((r) => !r.archived || r.id === c.rubro_id).map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+                  </select>
+                )}
+                {catUsada(c.id)
+                  ? <button type="button" className="btn small" onClick={() => run(supabase.from('categories').update({ archived: !c.archived }).eq('id', c.id))}>{c.archived ? 'Reactivar' : 'Ocultar'}</button>
+                  : <button type="button" className="btn small danger" onClick={() => borrarCat(c)}>Borrar</button>}
               </div>
             ))}
             <form className="row gap8" onSubmit={agregarCat}>

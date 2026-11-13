@@ -27,6 +27,7 @@ export function StoreProvider({ children }) {
   const [family, setFamily] = useState(null);
   const [members, setMembers] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [rubros, setRubros] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [month, setMonth] = useState(currentMonth());
   const [error, setError] = useState('');
@@ -44,16 +45,18 @@ export function StoreProvider({ children }) {
       if (e1) throw e1;
       if (!mine) { setMe(null); return; }
       const since = monthStart(currentMonth() - MESES_HISTORIA);
-      const [fam, mem, cat, exp] = await Promise.all([
+      const [fam, mem, cat, rub, exp] = await Promise.all([
         supabase.from('families').select('*').eq('id', mine.family_id).single(),
         supabase.from('members').select('*').order('created_at'),
         supabase.from('categories').select('*').order('sort'),
+        supabase.from('rubros').select('*').order('sort'),
         fetchAll(() => supabase.from('expenses').select('*').gte('spent_on', since).order('spent_on', { ascending: false }))
       ]);
       for (const r of [fam, mem, cat]) if (r.error) throw r.error;
       setFamily(fam.data);
       setMembers(mem.data);
       setCategories(cat.data);
+      setRubros(rub.error ? [] : rub.data); // si todavía no se creó la tabla, la app sigue andando
       setExpenses(exp);
       setMe(mine);
       setError('');
@@ -82,12 +85,14 @@ export function StoreProvider({ children }) {
   const value = useMemo(() => {
     const memberById = Object.fromEntries(members.map((m) => [m.id, m]));
     const catById = Object.fromEntries(categories.map((c) => [c.id, c]));
+    const rubroById = Object.fromEntries(rubros.map((r) => [r.id, r]));
     return {
       session, me, family, members, categories, expenses, month, setMonth, error, setError, loadAll,
+      rubros, rubroById, activeRubros: rubros.filter((r) => !r.archived),
       memberById, catById,
       activeCategories: categories.filter((c) => !c.archived)
     };
-  }, [session, me, family, members, categories, expenses, month, error, loadAll]);
+  }, [session, me, family, members, categories, rubros, expenses, month, error, loadAll]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
