@@ -43,11 +43,28 @@ export default function App() {
 
   const isForm = loc.pathname.startsWith('/gasto');
 
+  // En iPhone el teclado solo se abre si el foco se da durante el toque.
+  // Enfocamos un campo invisible ya mismo y la pantalla de carga pasa el foco al monto.
+  function nuevoGasto() {
+    let tmp = document.getElementById('focus-puente');
+    if (!tmp) {
+      tmp = document.createElement('input');
+      tmp.id = 'focus-puente';
+      tmp.setAttribute('inputmode', 'decimal');
+      tmp.setAttribute('aria-hidden', 'true');
+      tmp.tabIndex = -1;
+      Object.assign(tmp.style, { position: 'fixed', top: '0', left: '0', opacity: '0', height: '1px', width: '1px', fontSize: '16px', border: '0', padding: '0' });
+      document.body.appendChild(tmp);
+    }
+    tmp.focus();
+    nav('/gasto/nuevo');
+  }
+
   return (
     <div className="shell">
       <aside className="sidebar">
         <div className="brand"><span className="brandmark">$</span><span>Gastos en Familia</span></div>
-        <button type="button" className="btn primary sideadd" onClick={() => nav('/gasto/nuevo')}><Icon name="plus" size={20} />Cargar gasto</button>
+        <button type="button" className="btn primary sideadd" onClick={() => nuevoGasto()}><Icon name="plus" size={20} />Cargar gasto</button>
         <nav className="sidenav">
           {NAV.map((n) => (
             <NavLink key={n.to} to={n.to} end={n.end} className={({ isActive }) => 'sidelink' + (isActive ? ' active' : '')}>
@@ -74,7 +91,7 @@ export default function App() {
 
       {!isForm && (
         <>
-          <button type="button" className="fab" aria-label="Cargar gasto" onClick={() => nav('/gasto/nuevo')}>
+          <button type="button" className="fab" aria-label="Cargar gasto" onClick={() => nuevoGasto()}>
             <Icon name="plus" size={28} />
           </button>
           <nav className="bottomnav">

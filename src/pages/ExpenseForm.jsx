@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useStore } from '../store.jsx';
 import { supabase } from '../supabase.js';
@@ -33,6 +33,16 @@ export default function ExpenseForm() {
   const [fijo, setFijo] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
+  const montoRef = useRef(null);
+
+  // Al abrir un gasto nuevo, el cursor va directo al monto.
+  useEffect(() => {
+    if (editing) return;
+    const el = montoRef.current;
+    if (el) { el.focus(); el.select?.(); }
+    const t = setTimeout(() => { el?.focus(); document.getElementById('focus-puente')?.remove(); }, 50);
+    return () => clearTimeout(t);
+  }, []);
 
   useEffect(() => {
     if (!editing) return;
@@ -89,7 +99,7 @@ export default function ExpenseForm() {
         <label htmlFor="monto" className="muted small">{n > 1 ? 'Monto total en pesos' : 'Monto en pesos'}</label>
         <div className="row baseline gap6 center">
           <span className="amount-sign">$</span>
-          <input id="monto" className="amount-input" inputMode="decimal" autoFocus={!editing} placeholder="0"
+          <input id="monto" className="amount-input" inputMode="decimal" ref={montoRef} placeholder="0"
             style={{ width: `${Math.max(2, monto.length + 1)}ch` }} value={monto} onChange={(e) => setMonto(e.target.value)} />
         </div>
         {n > 1 && valor > 0 && <span className="muted small">{n} cuotas de {money(valor / n)}</span>}
