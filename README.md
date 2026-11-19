@@ -1,4 +1,4 @@
-# Gastos en Familia
+# Gastos Personales
 
 Web gratuita para controlar los gastos de la familia. Funciona en la notebook y se instala en Android y iPhone como una app (PWA).
 

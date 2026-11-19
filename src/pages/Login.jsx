@@ -29,7 +29,7 @@ export default function Login() {
   return (
     <div className="center-screen">
       <form className="card narrow stack16" onSubmit={submit}>
-        <div className="brand dark"><span className="brandmark">$</span><span>Gastos en Familia</span></div>
+        <div className="brand dark"><span className="brandmark">$</span><span>Gastos Personales</span></div>
         <h1>{modo === 'entrar' ? 'Entrar' : 'Crear cuenta'}</h1>
         <label className="field">Email
           <input type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />

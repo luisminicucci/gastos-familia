@@ -10,8 +10,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg', 'apple-touch-icon.png'],
       manifest: {
-        name: 'Gastos en Familia',
-        short_name: 'Gastos',
+        name: 'Gastos Personales',
+        short_name: 'Gastos Personales',
         description: 'Control de gastos familiares',
         lang: 'es-AR',
         start_url: './',

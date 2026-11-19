@@ -63,7 +63,7 @@ export default function App() {
   return (
     <div className="shell">
       <aside className="sidebar">
-        <div className="brand"><span className="brandmark">$</span><span>Gastos en Familia</span></div>
+        <div className="brand"><span className="brandmark">$</span><span>Gastos Personales</span></div>
         <button type="button" className="btn primary sideadd" onClick={() => nuevoGasto()}><Icon name="plus" size={20} />Cargar gasto</button>
         <nav className="sidenav">
           {NAV.map((n) => (
