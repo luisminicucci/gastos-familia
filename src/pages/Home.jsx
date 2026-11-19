@@ -33,7 +33,7 @@ export default function Home() {
       <MonthPicker />
 
       <section className="hero">
-        <span className="hero-sub">Gastado en {monthLabel(month).toLowerCase()} en familia</span>
+        <span className="hero-sub">Gastado en {monthLabel(month)}</span>
         <div className="row gap8 baseline wrap">
           <span className="hero-num">{money(total)}</span>
           {budget > 0 && <span className="hero-sub">de {money(budget)}</span>}
